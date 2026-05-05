@@ -87,7 +87,7 @@ class WorkerTest {
 
         // When
         try (Worker worker = applicationContext.createBean(Worker.class)) {
-            worker.start(1, null);
+            worker.start(1);
             workerJobEventQueue.emit(null, WorkerJobEvent.of(workerTask(Duration.ofSeconds(1)), null));
 
             await()
@@ -134,7 +134,7 @@ class WorkerTest {
 
         // When
         try (Worker worker = applicationContext.createBean(Worker.class)) {
-            worker.start(1, null);
+            worker.start(1);
             workerJobEventQueue.emit(null, WorkerJobEvent.of(workerTask, null));
 
             await()
@@ -162,7 +162,7 @@ class WorkerTest {
         String executionId = IdUtils.create();
 
         try (Worker worker = applicationContext.createBean(Worker.class)) {
-            worker.start(1, null);
+            worker.start(1);
 
             workerJobEventQueue.emit(null, WorkerJobEvent.of(workerTask(Duration.ofSeconds(60), executionId), null));
             workerJobEventQueue.emit(null, WorkerJobEvent.of(workerTask(Duration.ofSeconds(60), executionId), null));
