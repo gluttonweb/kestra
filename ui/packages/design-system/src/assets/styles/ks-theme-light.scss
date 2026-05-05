@@ -105,6 +105,30 @@
     #{--ks-chart-trace}: $base-gray-200;
     #{--ks-chart-warn}: $base-orange-200;
     #{--ks-chart-warning}: $base-orange-100;
+    /* categorical chart palette — for non-status categorical visualizations
+       (e.g. capacity allocations across worker-pool subscriptions). */
+    #{--ks-chart-categorical-default}: #607D8B;
+    #{--ks-chart-categorical-1}: #6A78FF;
+    #{--ks-chart-categorical-2}: #FF9E57;
+    #{--ks-chart-categorical-3}: #22C55E;
+    #{--ks-chart-categorical-4}: #EF4444;
+    #{--ks-chart-categorical-5}: #A855F7;
+    #{--ks-chart-categorical-6}: #06B6D4;
+    #{--ks-chart-categorical-7}: #F59E0B;
+    /* content rendered on top of a saturated categorical chart segment;
+       same value in light & dark because the underlying segment is always saturated. */
+    #{--ks-chart-categorical-content}: $base-white;
+
+    /* translucent overlay used on top of a saturated categorical segment to mark it
+       as "elastic" (lendable). Same value in light & dark — like
+       --ks-chart-categorical-content, the underlying segment is always saturated so
+       a white-translucent stripe lightens uniformly regardless of theme. */
+    #{--ks-capacity-bar-elastic-overlay}: rgba($base-white, 0.28);
+
+    /* solid grey pill drawn behind labels on top of saturated categorical segments
+       to keep text legible regardless of segment color. Matches the page body
+       background in dark mode. Same value in light & dark. */
+    #{--ks-capacity-bar-label-scrim}: $base-gray-800;
 
     /* content */
     #{--ks-content-alert}: $base-red-500;
