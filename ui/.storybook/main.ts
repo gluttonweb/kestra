@@ -10,20 +10,14 @@ const config: StorybookConfig = {
         name: "@storybook/vue3-vite",
         options: {},
     },
-    async viteFinal(viteConfig) {
+    async viteFinal(config) {
         const {default: viteJSXPlugin} = await import("@vitejs/plugin-vue-jsx")
-        viteConfig.plugins = [
-            ...(viteConfig.plugins ?? []),
+        config.plugins = [
+            ...(config.plugins ?? []),
             viteJSXPlugin(),
         ]
 
-        if (viteConfig.resolve) {
-            viteConfig.resolve.alias = {
-                ...viteConfig.resolve?.alias,
-            }
-        }
-
-        return mergeConfig(viteConfig, {
+        return mergeConfig(config, {
             define: {"process.env": {}},
         })
     },
