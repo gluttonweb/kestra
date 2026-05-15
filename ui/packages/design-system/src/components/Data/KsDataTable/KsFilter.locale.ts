@@ -167,7 +167,16 @@ export default {
             },
             "timeRange_trigger": {
                 "label": "Interval",
-                "description": "Filter by last triggered timestamp",
+                "description": "Filter by trigger time",
+                "applyTo": "Apply to",
+                "chip": {
+                    "nextExecution": "Next execution",
+                    "lastTriggered": "Last triggered",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Next execution date",
+                    "lastTriggeredDate": "Last triggered date",
+                },
             },
             "timeRange_metric": {
                 "label": "Interval",
@@ -614,8 +623,17 @@ export default {
                 "label": "Intervall",
             },
             "timeRange_trigger": {
-                "description": "Nach letztem Trigger-Zeitstempel filtern",
+                "description": "Nach Trigger-Zeit filtern",
                 "label": "Intervall",
+                "applyTo": "Anwenden auf",
+                "chip": {
+                    "nextExecution": "Nächste Ausführung",
+                    "lastTriggered": "Zuletzt ausgelöst",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Nächstes Ausführungsdatum",
+                    "lastTriggeredDate": "Letztes Auslösedatum",
+                },
             },
             "timerange": {
                 "custom": "Benutzerdefinierter Bereich",
@@ -950,8 +968,17 @@ export default {
                 "label": "Intervalo",
             },
             "timeRange_trigger": {
-                "description": "Filtrar por la última marca de tiempo activada",
+                "description": "Filtrar por tiempo de trigger",
                 "label": "Intervalo",
+                "applyTo": "Aplicar a",
+                "chip": {
+                    "nextExecution": "Próxima ejecución",
+                    "lastTriggered": "Última activación",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Fecha de próxima ejecución",
+                    "lastTriggeredDate": "Fecha de última activación",
+                },
             },
             "timerange": {
                 "custom": "Rango Personalizado",
@@ -1286,8 +1313,17 @@ export default {
                 "label": "Intervalle",
             },
             "timeRange_trigger": {
-                "description": "Filtrer par dernier timestamp déclenché",
+                "description": "Filtrer par temps de déclenchement",
                 "label": "Intervalle",
+                "applyTo": "Appliquer à",
+                "chip": {
+                    "nextExecution": "Prochaine exécution",
+                    "lastTriggered": "Dernier déclenchement",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Date de prochaine exécution",
+                    "lastTriggeredDate": "Date du dernier déclenchement",
+                },
             },
             "timerange": {
                 "custom": "Plage personnalisée",
@@ -1622,8 +1658,17 @@ export default {
                 "label": "अंतराल",
             },
             "timeRange_trigger": {
-                "description": "अंतिम ट्रिगर किए गए टाइमस्टैम्प द्वारा फ़िल्टर करें",
+                "description": "ट्रिगर समय द्वारा फ़िल्टर करें",
                 "label": "अंतराल",
+                "applyTo": "लागू करें",
+                "chip": {
+                    "nextExecution": "अगला निष्पादन",
+                    "lastTriggered": "अंतिम ट्रिगर",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "अगली निष्पादन तिथि",
+                    "lastTriggeredDate": "अंतिम ट्रिगर तिथि",
+                },
             },
             "timerange": {
                 "custom": "कस्टम रेंज",
@@ -1958,8 +2003,17 @@ export default {
                 "label": "Intervallo",
             },
             "timeRange_trigger": {
-                "description": "Filtra per timestamp dell'ultimo trigger",
+                "description": "Filtra per tempo del trigger",
                 "label": "Intervallo",
+                "applyTo": "Applica a",
+                "chip": {
+                    "nextExecution": "Prossima esecuzione",
+                    "lastTriggered": "Ultimo trigger",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Data della prossima esecuzione",
+                    "lastTriggeredDate": "Data dell'ultimo trigger",
+                },
             },
             "timerange": {
                 "custom": "Intervallo personalizzato",
@@ -2294,8 +2348,17 @@ export default {
                 "label": "インターバル",
             },
             "timeRange_trigger": {
-                "description": "最終トリガーのタイムスタンプでフィルター",
+                "description": "トリガー時刻でフィルター",
                 "label": "インターバル",
+                "applyTo": "適用先",
+                "chip": {
+                    "nextExecution": "次回実行",
+                    "lastTriggered": "最終トリガー",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "次回実行日",
+                    "lastTriggeredDate": "最終トリガー日",
+                },
             },
             "timerange": {
                 "custom": "カスタム範囲",
@@ -2630,8 +2693,17 @@ export default {
                 "label": "간격",
             },
             "timeRange_trigger": {
-                "description": "마지막 trigger된 타임스탬프로 필터링",
+                "description": "트리거 시간으로 필터링",
                 "label": "간격",
+                "applyTo": "적용 대상",
+                "chip": {
+                    "nextExecution": "다음 실행",
+                    "lastTriggered": "마지막 트리거",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "다음 실행 날짜",
+                    "lastTriggeredDate": "마지막 트리거 날짜",
+                },
             },
             "timerange": {
                 "custom": "사용자 정의 범위",
@@ -2966,8 +3038,17 @@ export default {
                 "label": "Interwał",
             },
             "timeRange_trigger": {
-                "description": "Filtruj według ostatniego uruchomienia znacznika czasu",
+                "description": "Filtruj według czasu wyzwalania",
                 "label": "Interwał",
+                "applyTo": "Zastosuj do",
+                "chip": {
+                    "nextExecution": "Następne wykonanie",
+                    "lastTriggered": "Ostatnie uruchomienie",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Data następnego wykonania",
+                    "lastTriggeredDate": "Data ostatniego uruchomienia",
+                },
             },
             "timerange": {
                 "custom": "Zakres niestandardowy",
@@ -3302,8 +3383,17 @@ export default {
                 "label": "Intervalo",
             },
             "timeRange_trigger": {
-                "description": "Filtrar por timestamp do último trigger",
+                "description": "Filtrar por tempo do trigger",
                 "label": "Intervalo",
+                "applyTo": "Aplicar a",
+                "chip": {
+                    "nextExecution": "Próxima execução",
+                    "lastTriggered": "Último trigger",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Data da próxima execução",
+                    "lastTriggeredDate": "Data do último trigger",
+                },
             },
             "timerange": {
                 "custom": "Intervalo Personalizado",
@@ -3638,8 +3728,17 @@ export default {
                 "label": "Intervalo",
             },
             "timeRange_trigger": {
-                "description": "Filtrar por timestamp do último trigger",
+                "description": "Filtrar por tempo do trigger",
                 "label": "Intervalo",
+                "applyTo": "Aplicar a",
+                "chip": {
+                    "nextExecution": "Próxima execução",
+                    "lastTriggered": "Último trigger",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Data da próxima execução",
+                    "lastTriggeredDate": "Data do último trigger",
+                },
             },
             "timerange": {
                 "custom": "Intervalo Personalizado",
@@ -3974,8 +4073,17 @@ export default {
                 "label": "Интервал",
             },
             "timeRange_trigger": {
-                "description": "Фильтр по последней метке времени срабатывания",
+                "description": "Фильтр по времени триггера",
                 "label": "Интервал",
+                "applyTo": "Применить к",
+                "chip": {
+                    "nextExecution": "Следующее выполнение",
+                    "lastTriggered": "Последнее срабатывание",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "Дата следующего выполнения",
+                    "lastTriggeredDate": "Дата последнего срабатывания",
+                },
             },
             "timerange": {
                 "custom": "Пользовательский диапазон",
@@ -4310,8 +4418,17 @@ export default {
                 "label": "间隔",
             },
             "timeRange_trigger": {
-                "description": "按最后触发的时间戳筛选",
+                "description": "按触发器时间筛选",
                 "label": "间隔",
+                "applyTo": "应用到",
+                "chip": {
+                    "nextExecution": "下次执行",
+                    "lastTriggered": "最后触发",
+                },
+                "dateFilter": {
+                    "nextExecutionDate": "下次执行日期",
+                    "lastTriggeredDate": "最后触发日期",
+                },
             },
             "timerange": {
                 "custom": "自定义范围",
