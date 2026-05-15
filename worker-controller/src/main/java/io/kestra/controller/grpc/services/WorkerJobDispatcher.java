@@ -3,6 +3,8 @@ package io.kestra.controller.grpc.services;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -52,7 +54,6 @@ import io.kestra.core.server.ClusterEvent;
 import io.kestra.core.utils.Either;
 import io.kestra.core.worker.MetadataChangePayload;
 import io.kestra.core.worker.WorkerBroadcastEvent;
-import io.kestra.core.worker.WorkerGroups;
 
 import io.micronaut.core.annotation.Nullable;
 import jakarta.annotation.PreDestroy;
@@ -370,13 +371,14 @@ public class WorkerJobDispatcher {
         // Add to global index
         activeStreams.put(context.getWorkerId(), context);
 
-        // Add to worker group index for dynamic reconfiguration. The default worker group cannot be reconfigured
-        // (no row exists for it in the repository), so we don't track its workers here.
+        // Track every worker (including those in the default group) in the worker-group
+        // index so that subscription changes can trigger a re-registration via
+        // {@code WORKER_GROUP_SYNC_REQUESTED}. EE persists a configurable default
+        // worker group, so the previous "default is immutable" assumption no longer
+        // holds — workers in that group must also be reachable for reconfiguration.
         String workerGroupId = context.getWorkerGroupId();
-        if (!WorkerGroups.isDefault(workerGroupId)) {
-            workerIdsByWorkerGroup.computeIfAbsent(workerGroupId, k -> ConcurrentHashMap.newKeySet())
-                .add(context.getWorkerId());
-        }
+        workerIdsByWorkerGroup.computeIfAbsent(workerGroupId, k -> ConcurrentHashMap.newKeySet())
+            .add(context.getWorkerId());
 
         // Register in each subscribed Worker Queue, acquiring locks in consistent order.
         // Retry on disposed-state races, but cap so a real bug can't spin forever.
@@ -521,15 +523,13 @@ public class WorkerJobDispatcher {
         // counting toward bucket usage.
         context.releaseAllInFlightBuckets();
 
-        // Remove from worker group index (mirror of registerWorker — the default worker group is not tracked)
+        // Remove from worker group index (mirror of registerWorker — default group included)
         String workerGroupId = context.getWorkerGroupId();
-        if (!WorkerGroups.isDefault(workerGroupId)) {
-            Set<String> workerGroupWorkers = workerIdsByWorkerGroup.get(workerGroupId);
-            if (workerGroupWorkers != null) {
-                workerGroupWorkers.remove(workerId);
-                if (workerGroupWorkers.isEmpty()) {
-                    workerIdsByWorkerGroup.remove(workerGroupId);
-                }
+        Set<String> workerGroupWorkers = workerIdsByWorkerGroup.get(workerGroupId);
+        if (workerGroupWorkers != null) {
+            workerGroupWorkers.remove(workerId);
+            if (workerGroupWorkers.isEmpty()) {
+                workerIdsByWorkerGroup.remove(workerGroupId);
             }
         }
 
@@ -757,6 +757,15 @@ public class WorkerJobDispatcher {
                 log.error("Unexpected exception when trying to handle a deserialization error", e);
             }
         }
+    }
+
+    /**
+     * Returns a snapshot of all active worker stream contexts. Iteration is safe; the
+     * returned collection is an unmodifiable view backed by a {@link ConcurrentHashMap}
+     * whose iterators are weakly consistent.
+     */
+    public Collection<WorkerStreamContext<WorkerJobResponse>> activeStreams() {
+        return Collections.unmodifiableCollection(activeStreams.values());
     }
 
     /**
