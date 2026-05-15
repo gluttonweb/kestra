@@ -1,9 +1,10 @@
 <template>
-    <Editor
+    <KsEditor
+        v-bind="editorBindings"
         :modelValue="localEditorValue"
         :navbar="false"
         :fullHeight="false"
-        :input="true"
+        :inline="true"
         lang="yaml"
         :placeholder="`Your ${root || 'value'} here...`"
         @update:model-value="editorInput"
@@ -12,9 +13,11 @@
 </template>
 <script setup lang="ts">
     import {collapseEmptyValues} from "./MixinTask"
-    import Editor from "../../../../components/inputs/Editor.vue"
-    import {flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {KsEditor, flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {useEditorBindings} from "../../../../composables/useEditorBindings"
     import {computed, ref} from "vue"
+
+    const editorBindings = useEditorBindings()
 
     const props = defineProps({
         modelValue: {

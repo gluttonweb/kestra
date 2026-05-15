@@ -75,9 +75,10 @@
                 />
             </div>
             <div v-if="isShowConditionOpen">
-                <Editor
+                <KsEditor
+                    v-bind="editorBindings"
                     :readOnly="true"
-                    :input="true"
+                    :inline="true"
                     :fullHeight="false"
                     :navbar="false"
                     :modelValue="selectedTask.runIf"
@@ -102,11 +103,10 @@
     // @ts-expect-error no types for TaskRunDetails yet
     import TaskRunDetails from "../logs/TaskRunDetails.vue"
     import Collapse from "../layout/Collapse.vue"
-    import Editor from "./Editor.vue"
 
     import {Topology} from "@kestra-io/topology"
-    import {SECTIONS, KsMarkdown} from "@kestra-io/design-system"
-    import {flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {SECTIONS, KsMarkdown, KsEditor, flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {useEditorBindings} from "../../composables/useEditorBindings"
 
     import {TOPOLOGY_CLICK_INJECTION_KEY} from "../no-code/injectionKeys"
     import {useCoreStore} from "../../stores/core"
@@ -124,6 +124,8 @@
 
     const executionsStore = useExecutionsStore()
     const playgroundStore = usePlaygroundStore()
+
+    const editorBindings = useEditorBindings()
 
     const props = withDefaults(
         defineProps<{

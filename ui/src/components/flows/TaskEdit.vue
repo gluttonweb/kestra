@@ -54,7 +54,8 @@
                     <template #label>
                         <span>{{ $t("source") }}</span>
                     </template>
-                    <Editor
+                    <KsEditor
+                        v-bind="editorBindings"
                         :readOnly="readOnly"
                         ref="editor"
                         @save="saveTask"
@@ -83,11 +84,10 @@
 
 <script setup lang="ts">
     import {ref, computed, watch} from "vue"
-    import {SECTIONS, KsMarkdown} from "@kestra-io/design-system"
-    import {flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {SECTIONS, KsMarkdown, KsEditor, flowYamlUtils as YAML_UTILS} from "@kestra-io/design-system"
+    import {useEditorBindings} from "../../composables/useEditorBindings"
     import CodeTags from "vue-material-design-icons/CodeTags.vue"
     import ContentSave from "vue-material-design-icons/ContentSave.vue"
-    import Editor from "../inputs/Editor.vue"
     import TaskEditor from "../no-code/components/TaskEditor.vue"
     import {canSaveFlowTemplate} from "../../utils/flowTemplate"
     import ValidationError from "./ValidationError.vue"
@@ -130,6 +130,7 @@
 
     const pluginsStore = usePluginsStore()
 
+    const editorBindings = useEditorBindings()
 
     const taskYaml = ref("")
     const isModalOpen = ref(false)

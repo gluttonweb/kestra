@@ -36,6 +36,11 @@ import KsDialog from "./components/Feedback/KsDialog.vue"
 import KsDivider from "./components/Others/KsDivider.vue"
 import KsDrawer from "./components/Feedback/KsDrawer.vue"
 import KsDurationPicker from "./components/Form/KsDurationPicker.vue"
+import KsEditor from "./components/Form/KsEditor.vue"
+export type {KsEditorSchemaType, KsEditorExposes, EditorOptions} from "./components/Form/KsEditor.vue"
+export {findDuplicateTaskIds} from "./utils/yamlValidation"
+export type {EditorMarker} from "./utils/yamlValidation"
+export {isOffsetInPebbleBlock} from "./utils/pebbleBlock"
 import KsDropdown from "./components/Navigation/KsDropdown/KsDropdown.vue"
 import KsDropdownItem from "./components/Navigation/KsDropdown/KsDropdownItem.vue"
 import KsDropdownMenu from "./components/Navigation/KsDropdown/KsDropdownMenu.vue"
@@ -179,6 +184,7 @@ const components = {
     KsDropdown,
     KsDropdownItem,
     KsDropdownMenu,
+    KsEditor,
     KsEmpty,
     KsExecutionStatus,
     KsFilter,
@@ -266,6 +272,7 @@ export {
     KsDropdown,
     KsDropdownItem,
     KsDropdownMenu,
+    KsEditor,
     KsEmpty,
     KsExecutionStatus,
     KsFilter,
