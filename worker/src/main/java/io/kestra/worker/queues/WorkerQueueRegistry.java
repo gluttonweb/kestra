@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.kestra.core.metrics.MetricRegistry;
+import io.kestra.core.worker.WorkerGroups;
 import io.kestra.core.worker.models.WorkerContext;
 
 import jakarta.inject.Inject;
@@ -75,7 +76,12 @@ public class WorkerQueueRegistry {
             // the controller as `WorkerConnectionInfo.maxConcurrency` for reservation math.
             int queueCapacity = bufferSize(context.workerThreads());
             String queueName = type.getSimpleName().toLowerCase();
-            return new MonitoredWorkerQueue<T>(metricRegistry, queueName, new InMemoryWorkerQueue<>(queueCapacity));
+            return new MonitoredWorkerQueue<T>(
+                metricRegistry,
+                queueName,
+                new InMemoryWorkerQueue<>(queueCapacity),
+                MetricRegistry.TAG_WORKER_GROUP, WorkerGroups.normalize(context.workerGroupId())
+            );
         }
         );
     }
