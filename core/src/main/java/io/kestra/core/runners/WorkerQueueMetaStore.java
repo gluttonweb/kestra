@@ -1,15 +1,16 @@
 package io.kestra.core.runners;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
+
+import io.kestra.core.models.tasks.WorkerSelectorMatch;
 
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.annotation.Secondary;
 import jakarta.inject.Singleton;
 
 /**
- * Service interface for accessing Worker Queue routing data from a Kestra's Executor
- * service.
+ * Service interface for accessing Worker Queue routing data from a Kestra Executor.
  *
  * <p>Worker Queues are identified by their user-supplied {@code id} — the routing
  * identity used to dispatch jobs to queues. The {@code id} is immutable: tags, tenant
@@ -33,16 +34,26 @@ public interface WorkerQueueMetaStore {
     Set<String> listAllWorkerQueueIds();
 
     /**
-     * Resolves the id of the most specific Worker Queue whose tag set contains all
-     * {@code requiredTags} and is accessible to {@code tenant}.
+     * Resolves the candidate Worker Queue ids that match {@code requiredTags} under
+     * the given {@code match} strategy, ordered by tiebreaker (best match first).
      *
-     * <p>"Most specific" = fewest extra tags; ties are broken alphabetically on the id.
+     * <p>For {@link WorkerSelectorMatch#ALL}, candidates are queues whose tag set is a
+     * superset of {@code requiredTags}; the chain is tenant specificity → tenant-scope
+     * cardinality → WQ tag-set surplus → alphabetical canonical key. Cardinality is
+     * effectively ≤ 1 (most-specific wins, no fall-through to less-specific queues).
      *
-     * @param requiredTags the required tags (case-insensitive match against Worker Queue tags)
+     * <p>For {@link WorkerSelectorMatch#ANY}, candidates are queues whose tag set
+     * intersects {@code requiredTags}; the chain is tenant specificity → tenant-scope
+     * cardinality → intersection size (more overlap wins) → WQ tag-set size →
+     * alphabetical canonical key.
+     *
+     * @param requiredTags the selector tags (case-insensitive)
      * @param tenant       the tenant id, may be {@code null}
-     * @return the winning Worker Queue id, or {@link Optional#empty()} if none match
+     * @param match        the match strategy; {@code null} is treated as
+     *                     {@link WorkerSelectorMatch#ALL}
+     * @return the candidate Worker Queue ids ordered best-first; empty when no queue matches
      */
-    Optional<String> resolveQueueIdByTags(Set<String> requiredTags, String tenant);
+    List<String> resolveQueueIdsByTags(Set<String> requiredTags, String tenant, WorkerSelectorMatch match);
 
     /**
      * Default {@link WorkerQueueMetaStore} implementation.
@@ -63,8 +74,8 @@ public interface WorkerQueueMetaStore {
         }
 
         @Override
-        public Optional<String> resolveQueueIdByTags(Set<String> requiredTags, String tenant) {
-            return Optional.empty();
+        public List<String> resolveQueueIdsByTags(Set<String> requiredTags, String tenant, WorkerSelectorMatch match) {
+            return List.of();
         }
     }
 }
