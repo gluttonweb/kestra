@@ -414,8 +414,12 @@ public class QueryFilterTest {
             buildQueryFiltersForOperations(
                 Field.TAGS, Resource.APP,
                 Set.of(
+                    Op.IN,
+                    Op.NOT_IN,
+                    Op.PREFIX,
                     Op.CONTAINS,
-                    Op.IN
+                    Op.STARTS_WITH,
+                    Op.ENDS_WITH
                 )
             ),
 
@@ -454,6 +458,13 @@ public class QueryFilterTest {
                     Op.IN,
                     Op.NOT_IN,
                     Op.PREFIX
+                )
+            ),
+
+            buildQueryFiltersForOperations(
+                Field.ENABLED, Resource.APP,
+                Set.of(
+                    Op.EQUALS
                 )
             ),
 
@@ -1157,11 +1168,7 @@ public class QueryFilterTest {
                     Op.LESS_THAN,
                     Op.GREATER_THAN_OR_EQUAL_TO,
                     Op.LESS_THAN_OR_EQUAL_TO,
-                    Op.NOT_IN,
-                    Op.STARTS_WITH,
-                    Op.ENDS_WITH,
-                    Op.REGEX,
-                    Op.PREFIX
+                    Op.REGEX
                 )
             ),
 
