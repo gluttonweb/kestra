@@ -41,7 +41,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenNewMcpWhenSaveThenPersistedWithTimestamps() {
+    void givenNewMcp_whenSave_thenPersistedWithTimestamps() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer mcpServer = createMcpServer(tenant);
@@ -58,7 +58,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenExistingMcpWhenGetThenReturned() {
+    void givenExistingMcp_whenGet_thenReturned() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer saved = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -72,7 +72,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenUnknownNameWhenGetThenEmpty() {
+    void givenUnknownName_whenGet_thenEmpty() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
 
@@ -84,7 +84,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenMcpFromOtherTenantWhenGetThenEmpty() {
+    void givenMcpFromOtherTenant_whenGet_thenEmpty() {
         // Given
         String tenant1 = TestsUtils.randomTenant(this.getClass().getSimpleName());
         String tenant2 = TestsUtils.randomTenant(this.getClass().getSimpleName());
@@ -98,7 +98,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenDeletedMcpWhenGetThenEmpty() {
+    void givenDeletedMcp_whenGet_thenEmpty() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer saved = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -112,7 +112,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenExistingMcpWhenUpdateThenChangesPersistedAndCreatedPreserved() {
+    void givenExistingMcp_whenUpdate_thenChangesPersistedAndCreatedPreserved() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer original = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -131,7 +131,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenUnchangedMcpWhenSaveThenPreviousReturned() {
+    void givenUnchangedMcp_whenSave_thenPreviousReturned() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer original = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -144,7 +144,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenExistingMcpWhenDeleteThenSoftDeletedAndNoLongerVisible() {
+    void givenExistingMcp_whenDelete_thenSoftDeletedAndNoLongerVisible() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer saved = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -159,7 +159,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenUnknownNameWhenDeleteThenEmpty() {
+    void givenUnknownName_whenDelete_thenEmpty() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
 
@@ -171,7 +171,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenMultipleMcpsWhenListThenAllReturned() {
+    void givenMultipleMcps_whenList_thenAllReturned() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         mcpServerRepository.save(null, createMcpServer(tenant));
@@ -186,7 +186,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenDeletedMcpWhenListThenExcludedFromResults() {
+    void givenDeletedMcp_whenList_thenExcludedFromResults() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer toDelete = mcpServerRepository.save(null, createMcpServer(tenant));
@@ -201,7 +201,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenMcpsAcrossTenantsWhenListThenOnlyCurrentTenantReturned() {
+    void givenMcpsAcrossTenants_whenList_thenOnlyCurrentTenantReturned() {
         // Given
         String tenant1 = TestsUtils.randomTenant(this.getClass().getSimpleName());
         String tenant2 = TestsUtils.randomTenant(this.getClass().getSimpleName());
@@ -246,7 +246,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenMcpsAcrossTenantsWhenListAllThenAllReturned() {
+    void givenMcpsAcrossTenants_whenListAll_thenAllReturned() {
         // Given
         String tenant1 = TestsUtils.randomTenant(this.getClass().getSimpleName());
         String tenant2 = TestsUtils.randomTenant(this.getClass().getSimpleName());
@@ -264,7 +264,7 @@ public abstract class AbstractMcpServerRepositoryTest {
     }
 
     @Test
-    void givenDeletedMcpWhenListAllThenExcluded() {
+    void givenDeletedMcp_whenListAll_thenExcluded() {
         // Given
         String tenant = TestsUtils.randomTenant(this.getClass().getSimpleName());
         McpServer toDelete = mcpServerRepository.save(null, createMcpServer(tenant));
