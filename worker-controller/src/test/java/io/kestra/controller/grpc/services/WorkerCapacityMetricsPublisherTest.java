@@ -32,68 +32,8 @@ class WorkerCapacityMetricsPublisherTest {
         publisher = new WorkerCapacityMetricsPublisher(dispatcher, metricRegistry);
     }
 
-    @Test
-    void shouldRegisterPerSubscriptionGaugesWhenWorkersConnect() {
-        WorkerStreamContext<WorkerJobResponse> worker = context("w1", "group-a", 10,
-            new QueueSubscription("gpu", 60),
-            new QueueSubscription("cpu", 30)
-        );
-        // 6 = 60% of 10 reserved for gpu; consume 2.
-        worker.tryReserveBucket("gpu");
-        worker.tryReserveBucket("gpu");
-        when(dispatcher.activeStreams()).thenReturn(List.of(worker));
-
-        publisher.publish();
-
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-a", "gpu"))
-            .isEqualTo(6.0);
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED, "group-a", "gpu"))
-            .isEqualTo(2.0);
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-a", "cpu"))
-            .isEqualTo(3.0);
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED, "group-a", "cpu"))
-            .isZero();
-        // Shared = 10 - 6 - 3 = 1.
-        assertThat(sharedGaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_ALLOCATED, "group-a"))
-            .isEqualTo(1.0);
-        assertThat(sharedGaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_USED, "group-a"))
-            .isZero();
-    }
-
-    @Test
-    void shouldSumAcrossWorkersInSameGroup() {
-        WorkerStreamContext<WorkerJobResponse> w1 = context("w1", "group-a", 10,
-            new QueueSubscription("gpu", 60));
-        WorkerStreamContext<WorkerJobResponse> w2 = context("w2", "group-a", 20,
-            new QueueSubscription("gpu", 60));
-        when(dispatcher.activeStreams()).thenReturn(List.of(w1, w2));
-
-        publisher.publish();
-
-        // 6 + 12 = 18 allocated to gpu across the two workers in group-a.
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-a", "gpu"))
-            .isEqualTo(18.0);
-    }
-
-    @Test
-    void shouldZeroOutStaleEntriesWhenWorkersDisconnect() {
-        WorkerStreamContext<WorkerJobResponse> worker = context("w1", "group-a", 10,
-            new QueueSubscription("gpu", 60));
-        worker.tryReserveBucket("gpu");
-        when(dispatcher.activeStreams()).thenReturn(List.of(worker));
-        publisher.publish();
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED, "group-a", "gpu"))
-            .isEqualTo(1.0);
-
-        // When the worker disconnects, the next tick must drop the value back to 0.
-        when(dispatcher.activeStreams()).thenReturn(List.of());
-        publisher.publish();
-
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED, "group-a", "gpu"))
-            .isZero();
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-a", "gpu"))
-            .isZero();
-    }
+    // Per-subscription allocation gauges only carry a value when reservations are
+    // in play; those scenarios are covered by the EE-side test class.
 
     @Test
     void shouldTagDefaultQueueWithDefaultSentinel() {
@@ -112,21 +52,8 @@ class WorkerCapacityMetricsPublisherTest {
             .isZero();
     }
 
-    @Test
-    void shouldKeepGaugesIsolatedBetweenGroups() {
-        WorkerStreamContext<WorkerJobResponse> wa = context("wa", "group-a", 10,
-            new QueueSubscription("gpu", 60));
-        WorkerStreamContext<WorkerJobResponse> wb = context("wb", "group-b", 10,
-            new QueueSubscription("gpu", 40));
-        when(dispatcher.activeStreams()).thenReturn(List.of(wa, wb));
-
-        publisher.publish();
-
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-a", "gpu"))
-            .isEqualTo(6.0);
-        assertThat(gaugeValue(MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED, "group-b", "gpu"))
-            .isEqualTo(4.0);
-    }
+    // shouldKeepGaugesIsolatedBetweenGroups moved to EE — it asserts per-subscription
+    // allocation gauges that only carry a value when reservations are in play.
 
     private double gaugeValue(String name, String workerGroup, String workerQueue) {
         Gauge gauge = meterRegistry.find(name)

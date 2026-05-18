@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import io.kestra.core.metrics.MetricRegistry;
@@ -54,132 +55,73 @@ public class WorkerCapacityMetricsPublisher {
     @Scheduled(fixedDelay = "5s", initialDelay = "5s")
     public void publish() {
         try {
-            Map<SubKey, int[]> subAgg = new HashMap<>();
-            Map<String, int[]> sharedAgg = new HashMap<>();
-            Map<String, Integer> inflightAgg = new HashMap<>();
+            Map<SubKey, Integer> subAlloc = new HashMap<>();
+            Map<SubKey, Integer> subUsed = new HashMap<>();
+            Map<String, Integer> sharedAlloc = new HashMap<>();
+            Map<String, Integer> sharedUsedAgg = new HashMap<>();
+            Map<String, Integer> inflight = new HashMap<>();
 
             for (WorkerStreamContext<?> ctx : dispatcher.activeStreams()) {
                 String groupId = ctx.getWorkerGroupId();
                 for (QueueSubscription sub : ctx.getQueueSubscriptions()) {
                     String qid = sub.normalizedWorkerQueueId();
-                    int alloc = ctx.guaranteedCapacity(qid);
-                    AtomicInteger usedCounter = ctx.getGuaranteedUsed().get(qid);
-                    int used = usedCounter != null ? usedCounter.get() : 0;
-                    int[] acc = subAgg.computeIfAbsent(new SubKey(groupId, qid), k -> new int[2]);
-                    acc[0] += alloc;
-                    acc[1] += used;
+                    SubKey key = new SubKey(groupId, qid);
+                    subAlloc.merge(key, ctx.guaranteedCapacity(qid), Integer::sum);
+                    subUsed.merge(key, ctx.guaranteedUsed(qid), Integer::sum);
                 }
-                int[] sharedAcc = sharedAgg.computeIfAbsent(groupId, k -> new int[2]);
-                sharedAcc[0] += ctx.sharedCapacity();
-                sharedAcc[1] += ctx.getSharedUsed().get();
-                inflightAgg.merge(groupId, ctx.getInFlightCount(), Integer::sum);
+                sharedAlloc.merge(groupId, ctx.sharedCapacity(), Integer::sum);
+                sharedUsedAgg.merge(groupId, ctx.sharedUsed(), Integer::sum);
+                inflight.merge(groupId, ctx.getInFlightCount(), Integer::sum);
             }
 
-            updateSubscriptionGauges(subAgg);
-            updateSharedGauges(sharedAgg);
-            updateInflightGauges(inflightAgg);
+            Function<SubKey, String[]> subTags = k -> metricRegistry.workerGroupAndQueueTags(k.workerGroupId(), k.workerQueueId());
+            Function<String, String[]> groupTags = metricRegistry::workerGroupTags;
+
+            publishGauge(subscriptionAllocated, subAlloc,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED_DESCRIPTION,
+                subTags);
+            publishGauge(subscriptionUsed, subUsed,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED_DESCRIPTION,
+                subTags);
+            publishGauge(sharedAllocated, sharedAlloc,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_ALLOCATED,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_ALLOCATED_DESCRIPTION,
+                groupTags);
+            publishGauge(sharedUsed, sharedUsedAgg,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_USED,
+                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_USED_DESCRIPTION,
+                groupTags);
+            publishGauge(groupInflight, inflight,
+                MetricRegistry.METRIC_CONTROLLER_WORKER_GROUP_JOB_INFLIGHT,
+                MetricRegistry.METRIC_CONTROLLER_WORKER_GROUP_JOB_INFLIGHT_DESCRIPTION,
+                groupTags);
         } catch (Exception e) {
             log.warn("Failed to publish worker capacity metrics", e);
         }
     }
 
-    private void updateSubscriptionGauges(Map<SubKey, int[]> subAgg) {
-        for (Map.Entry<SubKey, int[]> e : subAgg.entrySet()) {
-            SubKey key = e.getKey();
-            registerSubGaugesIfAbsent(key);
-            subscriptionAllocated.get(key).set(e.getValue()[0]);
-            subscriptionUsed.get(key).set(e.getValue()[1]);
-        }
-        zeroIfMissing(subscriptionAllocated, subAgg.keySet());
-        zeroIfMissing(subscriptionUsed, subAgg.keySet());
-    }
-
-    private void updateSharedGauges(Map<String, int[]> sharedAgg) {
-        for (Map.Entry<String, int[]> e : sharedAgg.entrySet()) {
-            String groupId = e.getKey();
-            registerSharedGaugesIfAbsent(groupId);
-            sharedAllocated.get(groupId).set(e.getValue()[0]);
-            sharedUsed.get(groupId).set(e.getValue()[1]);
-        }
-        zeroIfMissing(sharedAllocated, sharedAgg.keySet());
-        zeroIfMissing(sharedUsed, sharedAgg.keySet());
-    }
-
-    private void updateInflightGauges(Map<String, Integer> inflightAgg) {
-        for (Map.Entry<String, Integer> e : inflightAgg.entrySet()) {
-            String groupId = e.getKey();
-            registerInflightGaugeIfAbsent(groupId);
-            groupInflight.get(groupId).set(e.getValue());
-        }
-        zeroIfMissing(groupInflight, inflightAgg.keySet());
-    }
-
-    private void registerSubGaugesIfAbsent(SubKey key) {
-        subscriptionAllocated.computeIfAbsent(key, k -> {
-            AtomicInteger value = new AtomicInteger();
-            String[] tags = metricRegistry.workerGroupAndQueueTags(k.workerGroupId(), k.workerQueueId());
-            metricRegistry.gauge(
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED,
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_ALLOCATED_DESCRIPTION,
-                (Supplier<Integer>) value::get,
-                tags
-            );
-            return value;
+    private <K> void publishGauge(
+        ConcurrentHashMap<K, AtomicInteger> gauges,
+        Map<K, Integer> values,
+        String metricName,
+        String metricDescription,
+        Function<K, String[]> tagsFn
+    ) {
+        values.forEach((key, value) -> {
+            AtomicInteger gauge = gauges.computeIfAbsent(key, k -> {
+                AtomicInteger v = new AtomicInteger();
+                metricRegistry.gauge(metricName, metricDescription, (Supplier<Integer>) v::get, tagsFn.apply(k));
+                return v;
+            });
+            gauge.set(value);
         });
-        subscriptionUsed.computeIfAbsent(key, k -> {
-            AtomicInteger value = new AtomicInteger();
-            String[] tags = metricRegistry.workerGroupAndQueueTags(k.workerGroupId(), k.workerQueueId());
-            metricRegistry.gauge(
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED,
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SUBSCRIPTION_USED_DESCRIPTION,
-                (Supplier<Integer>) value::get,
-                tags
-            );
-            return value;
-        });
+        zeroIfMissing(gauges, values.keySet());
     }
 
-    private void registerSharedGaugesIfAbsent(String groupId) {
-        sharedAllocated.computeIfAbsent(groupId, k -> {
-            AtomicInteger value = new AtomicInteger();
-            String[] tags = metricRegistry.workerGroupTags(k);
-            metricRegistry.gauge(
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_ALLOCATED,
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_ALLOCATED_DESCRIPTION,
-                (Supplier<Integer>) value::get,
-                tags
-            );
-            return value;
-        });
-        sharedUsed.computeIfAbsent(groupId, k -> {
-            AtomicInteger value = new AtomicInteger();
-            String[] tags = metricRegistry.workerGroupTags(k);
-            metricRegistry.gauge(
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_USED,
-                MetricRegistry.METRIC_CONTROLLER_CAPACITY_SHARED_USED_DESCRIPTION,
-                (Supplier<Integer>) value::get,
-                tags
-            );
-            return value;
-        });
-    }
-
-    private void registerInflightGaugeIfAbsent(String groupId) {
-        groupInflight.computeIfAbsent(groupId, k -> {
-            AtomicInteger value = new AtomicInteger();
-            String[] tags = metricRegistry.workerGroupTags(k);
-            metricRegistry.gauge(
-                MetricRegistry.METRIC_CONTROLLER_WORKER_GROUP_JOB_INFLIGHT,
-                MetricRegistry.METRIC_CONTROLLER_WORKER_GROUP_JOB_INFLIGHT_DESCRIPTION,
-                (Supplier<Integer>) value::get,
-                tags
-            );
-            return value;
-        });
-    }
-
-    private static <K> void zeroIfMissing(Map<K, AtomicInteger> values, Set<K> present) {
-        values.forEach((k, v) -> {
+    private static <K> void zeroIfMissing(Map<K, AtomicInteger> gauges, Set<K> present) {
+        gauges.forEach((k, v) -> {
             if (!present.contains(k)) {
                 v.set(0);
             }
