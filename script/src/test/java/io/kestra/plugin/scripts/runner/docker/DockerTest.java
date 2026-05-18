@@ -231,6 +231,71 @@ class DockerTest extends AbstractTaskRunnerTest {
     }
 
     @Test
+    void shouldDeleteImageWhenDeleteImageIsTrue() throws Exception {
+        // Given
+        var runContext = runContext(this.runContextFactory);
+        String testImage = "alpine:3.19.0";
+
+        var docker = Docker.builder()
+            .image(testImage)
+            .pullPolicy(Property.ofValue(PullPolicy.IF_NOT_PRESENT))
+            .deleteImage(Property.ofValue(true))
+            .build();
+
+        var taskCommands = new CommandsWrapper(runContext).withCommands(
+            Property.ofValue(
+                List.of("/bin/sh", "-c", "echo 'deleteImage test'")
+            )
+        );
+
+        // When
+        var result = docker.run(runContext, taskCommands, Collections.emptyList());
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getExitCode()).isZero();
+
+        try (var client = DockerService.client(runContext, null, null, null, testImage)) {
+            var images = client.listImagesCmd()
+                .withImageNameFilter(testImage)
+                .exec();
+            Assertions.assertThat(images).isEmpty();
+        }
+    }
+
+    @Test
+    void shouldNotDeleteImageByDefault() throws Exception {
+        // Given
+        var runContext = runContext(this.runContextFactory);
+        String testImage = "rockylinux:9.3-minimal";
+
+        var docker = Docker.builder()
+            .image(testImage)
+            .pullPolicy(Property.ofValue(PullPolicy.ALWAYS))
+            .build();
+
+        var taskCommands = new CommandsWrapper(runContext).withCommands(
+            Property.ofValue(
+                List.of("/bin/sh", "-c", "echo 'no deleteImage test'")
+            )
+        );
+
+        // When
+        var result = docker.run(runContext, taskCommands, Collections.emptyList());
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getExitCode()).isZero();
+
+        try (var client = DockerService.client(runContext, null, null, null, testImage)) {
+            var images = client.listImagesCmd()
+                .withImageNameFilter(testImage)
+                .exec();
+            Assertions.assertThat(images).isNotEmpty();
+        }
+    }
+
+    @Test
     @FlakyTest
     void interruptAfterResume() throws Exception {
         var taskRunId = IdUtils.create();

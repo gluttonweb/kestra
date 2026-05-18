@@ -304,6 +304,19 @@ public class Docker extends TaskRunner<Docker.DockerTaskRunnerDetailResult> {
     @Builder.Default
     private Property<Boolean> delete = Property.ofValue(true);
 
+    @Schema(
+        title = "Whether the container image should be removed after execution.",
+        description = """
+            When true, the image used by the container is removed after the task completes.
+            This is useful when images are built dynamically (e.g. via `docker.Build`) and should not
+            accumulate on the Docker daemon between executions.
+            The image is force-removed; avoid enabling this with shared base images
+            that may be in use by other containers."""
+    )
+    @NotNull
+    @Builder.Default
+    private Property<Boolean> deleteImage = Property.ofValue(false);
+
     @Builder.Default
     @Schema(
         title = "Whether to wait for the container to exit."
@@ -362,6 +375,7 @@ public class Docker extends TaskRunner<Docker.DockerTaskRunnerDetailResult> {
     @Override
     public TaskRunnerResult<DockerTaskRunnerDetailResult> run(RunContext runContext, TaskCommands taskCommands, List<String> filesToDownload) throws Exception {
         Boolean renderedDelete = runContext.render(delete).as(Boolean.class).orElseThrow();
+        Boolean renderedDeleteImage = runContext.render(deleteImage).as(Boolean.class).orElseThrow();
 
         if (taskCommands.getContainerImage() == null && this.image == null) {
             throw new IllegalArgumentException("This task runner needs the `containerImage` property to be set");
@@ -649,6 +663,19 @@ public class Docker extends TaskRunner<Docker.DockerTaskRunnerDetailResult> {
                             if (logger.isTraceEnabled()) {
                                 logger.trace("Volume deleted: {}", filesVolumeName);
                             }
+                        }
+                    }
+
+                    if (Boolean.TRUE.equals(renderedDeleteImage)) {
+                        try {
+                            dockerClient.removeImageCmd(image).withForce(true).exec();
+                            if (logger.isDebugEnabled()) {
+                                logger.debug("Image deleted: {}", image);
+                            }
+                        } catch (NotFoundException e) {
+                            logger.debug("Image not found for deletion: {}", image);
+                        } catch (com.github.dockerjava.api.exception.ConflictException e) {
+                            logger.warn("Image could not be deleted (still in use): {}", image);
                         }
                     }
                 } catch (Exception ignored) {
