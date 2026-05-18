@@ -29,23 +29,23 @@
             </KsFormItem>
             <KsFormItem>
                 <KsTooltip
-                    :content="!raw_view ? $t('logs_view.raw_details') : $t('logs_view.compact_details')"
+                    :content="!raw_view ? t('logs_view.raw_details') : t('logs_view.compact_details')"
                 >
                     <KsButton @click="toggleViewType" :icon="logViewTypeButtonIcon">
-                        {{ !raw_view ? $t('logs_view.raw') : $t('logs_view.compact') }}
+                        {{ !raw_view ? t('logs_view.raw') : t('logs_view.compact') }}
                     </KsButton>
                 </KsTooltip>
             </KsFormItem>
             <KsFormItem>
                 <KsButtonGroup class="ks-b-group">
-                    <Restart v-if="executionsStore.execution" :execution="executionsStore.execution" @follow="forwardEvent('follow', $event)" />
-                    <KsIconButton :tooltip="$t('download logs')" @click="downloadContent()">
+                    <Restart v-if="executionsStore.execution" :execution="executionsStore.execution" @follow="emit('follow', $event)" />
+                    <KsIconButton :tooltip="t('download logs')" @click="downloadContent()">
                         <Download />
                     </KsIconButton>
-                    <KsIconButton :tooltip="$t('copy logs')" @click="copyAllLogs()">
+                    <KsIconButton :tooltip="t('copy logs')" @click="copyAllLogs()">
                         <ContentCopy />
                     </KsIconButton>
-                    <KsIconButton :tooltip="$t('refresh')" @click="loadLogs()">
+                    <KsIconButton :tooltip="t('refresh')" @click="loadLogs()">
                         <Refresh />
                     </KsIconButton>
                 </KsButtonGroup>
@@ -61,7 +61,7 @@
             :levelToHighlight="cursorLogLevel"
             @log-cursor="logCursor = $event"
             :logCursor="logCursor"
-            @follow="forwardEvent('follow', $event)"
+            @follow="emit('follow', $event)"
             @opened-taskruns-count="openedTaskrunsCount = $event"
             @log-indices-by-level="Object.entries($event).forEach(([levelName, indices]) => logIndicesByLevel[levelName] = indices)"
             :targetFlow="executionsStore.flow"
@@ -77,23 +77,23 @@
                 :buffer="200"
                 :prerender="20"
             >
-                <template #default="{item, active}">
+                <template #default="{item: rawItem, active}: {item: Record<string, any>, active: boolean}">
                     <DynamicScrollerItem
-                        :item="item"
+                        :item="rawItem"
                         :active="active"
-                        :sizeDependencies="[item.message]"
-                        :data-index="item.index"
-                        :key="item.uid"
+                        :sizeDependencies="[rawItem.message]"
+                        :data-index="rawItem.index"
+                        :key="rawItem.uid"
                     >
                         <LogLine
-                            @click="logCursor = item.index.toString()"
+                            @click="logCursor = rawItem.index.toString()"
                             class="line"
-                            :class="{['log-bg-' + cursorLogLevel?.toLowerCase()]: cursorLogLevel === item.level, 'opacity-40': cursorLogLevel && cursorLogLevel !== item.level}"
-                            :cursor="item.index.toString() === logCursor"
+                            :class="{['log-bg-' + cursorLogLevel?.toLowerCase()]: cursorLogLevel === rawItem.level, 'opacity-40': cursorLogLevel && cursorLogLevel !== rawItem.level}"
+                            :cursor="rawItem.index.toString() === logCursor"
                             :excludeMetas="['namespace', 'flowId', 'executionId']"
-                            :level="effectiveLevel"
+                            :level="(effectiveLevel as any)"
                             :filter="filter"
-                            :log="item"
+                            :log="(rawItem as any)"
                         />
                     </DynamicScrollerItem>
                 </template>
@@ -102,8 +102,11 @@
     </div>
 </template>
 
-<script>
-    import {computed} from "vue"
+<script setup lang="ts">
+    import {ref, computed, watch, useTemplateRef} from "vue"
+    import {useRoute} from "vue-router"
+    import {useI18n} from "vue-i18n"
+    import moment from "moment"
     import {useLogExecutionsFilter} from "../filter/configurations"
     import TaskRunDetails from "../logs/TaskRunDetails.vue"
     import Download from "vue-material-design-icons/Download.vue"
@@ -112,260 +115,246 @@
     import UnfoldLessHorizontal from "vue-material-design-icons/UnfoldLessHorizontal.vue"
     import ViewList from "vue-material-design-icons/ViewList.vue"
     import ViewGrid from "vue-material-design-icons/ViewGrid.vue"
-    import {KsIconButton} from "@kestra-io/design-system"
+    import {KsIconButton, KsFilter as KSFilter} from "@kestra-io/design-system"
     import LogLevelNavigator from "../logs/LogLevelNavigator.vue"
     import {DynamicScroller, DynamicScrollerItem} from "vue-virtual-scroller"
     import "vue-virtual-scroller/dist/vue-virtual-scroller.css"
     import Collapse from "../layout/Collapse.vue"
-    import {State} from "@kestra-io/design-system"
-
     import * as Utils from "../../utils/utils"
     import LogLine from "../logs/LogLine.vue"
     import Restart from "./overview/components/actions/Restart.vue"
     import * as LogUtils from "../../utils/logs"
     import Refresh from "vue-material-design-icons/Refresh.vue"
-    import {mapStores} from "pinia"
     import {useExecutionsStore} from "../../stores/executions"
-    import {KsFilter as KSFilter} from "@kestra-io/design-system"
     import {storageKeys} from "../../utils/constants"
     import {
         hasUnsupportedRouteLevelComparator,
         normalizeRouteLevelFilter,
         readRouteLevelFilter,
+        useRouteFilterPolicy,
     } from "@kestra-io/design-system"
-    import {useRouteFilterPolicy} from "@kestra-io/design-system"
 
-    function distinctFilter(value, index, array) {
+    function distinctFilter(value: unknown, index: number, array: unknown[]) {
         return array.indexOf(value) === index
     }
 
-    export default {
-        components: {
-            LogLine,
-            TaskRunDetails,
-            LogLevelNavigator,
-            KsIconButton,
-            Download,
-            ContentCopy,
-            Collapse,
-            Restart,
-            DynamicScroller,
-            DynamicScrollerItem,
-            Refresh,
-            KSFilter,
-        },
-        setup() {
-            const logExecutionsFilter = useLogExecutionsFilter()
-            const defaultLogLevel = computed(
-                () => localStorage.getItem("defaultLogLevel") || "INFO",
-            )
+    const emit = defineEmits<{
+        follow: [unknown]
+    }>()
 
-            const {
-                routeValue: routeLevel,
-                effectiveValue: effectiveLevel,
-            } = useRouteFilterPolicy({
-                defaultValue: () => defaultLogLevel.value,
-                applyDefaultIfMissing: () => true,
-                fallbackValue: () => "TRACE",
-                readFromRoute: readRouteLevelFilter,
-                writeToRoute: normalizeRouteLevelFilter,
-                hasUnsupportedRouteValue: hasUnsupportedRouteLevelComparator,
-            })
+    const {t} = useI18n({useScope: "global"})
+    const route = useRoute()
+    const executionsStore = useExecutionsStore()
 
-            return {
-                logExecutionsFilter,
-                routeLevel,
-                effectiveLevel,
+    const logExecutionsFilter = useLogExecutionsFilter()
+    const defaultLogLevel = computed(
+        () => localStorage.getItem("defaultLogLevel") || "INFO",
+    )
+
+    const {
+        routeValue: routeLevel,
+        effectiveValue: effectiveLevel,
+    } = useRouteFilterPolicy({
+        defaultValue: () => defaultLogLevel.value,
+        applyDefaultIfMissing: () => true,
+        fallbackValue: () => "TRACE",
+        readFromRoute: readRouteLevelFilter,
+        writeToRoute: normalizeRouteLevelFilter,
+        hasUnsupportedRouteValue: hasUnsupportedRouteLevelComparator,
+    })
+
+    const filter = ref<string | undefined>(route.query.q as string | undefined || undefined)
+    const openedTaskrunsCount = ref(0)
+    const raw_view = ref((localStorage.getItem(storageKeys.LOGS_VIEW_TYPE) ?? "false").toLowerCase() === "true")
+    const logIndicesByLevel = ref<Record<string, string[]>>(
+        Object.fromEntries(LogUtils.levelOrLower(undefined as any).map((level: string) => [level, []])),
+    )
+    const logCursor = ref<string | undefined>(undefined)
+
+    const logs = useTemplateRef<InstanceType<typeof TaskRunDetails>>("logs")
+    const logScroller = useTemplateRef<{ scrollToItem: (index: number) => void }>("logScroller")
+
+    const executionId = computed(() => executionsStore.execution?.id)
+
+    const downloadName = computed(() =>
+        `kestra-execution-${moment().format("YYYYMMDDHHmmss")}-${executionId.value}.log`,
+    )
+
+    const temporalLogs = computed(() => {
+        const logResults: Array<Record<string, any>> = (executionsStore.logs as any)?.results ?? []
+
+        if (!logResults.length) {
+            return []
+        }
+
+        const filtered = logResults.filter((log: Record<string, any>) => {
+            if (!filter.value) return true
+            return log.message?.toLowerCase().includes(filter.value.toLowerCase())
+        })
+
+        return filtered.map((logLine: Record<string, any>, index: number) => ({
+            ...logLine,
+            index,
+            uid: `${logLine.taskRunId ?? ""}-${logLine.attemptNumber ?? 0}-${logLine.timestamp}-${index}`,
+        }))
+    })
+
+    const logDisplayButtonText = computed(() =>
+        openedTaskrunsCount.value === 0 ? t("expand all") : t("collapse all"),
+    )
+
+    const logDisplayButtonIcon = computed(() =>
+        openedTaskrunsCount.value === 0 ? UnfoldMoreHorizontal : UnfoldLessHorizontal,
+    )
+
+    const logViewTypeButtonIcon = computed(() =>
+        raw_view.value ? ViewGrid : ViewList,
+    )
+
+    const currentLevelOrLower = computed(() =>
+        LogUtils.levelOrLower(routeLevel.value as any),
+    )
+
+    const countByLogLevel = computed(() =>
+        Object.fromEntries(
+            Object.entries(viewTypeAwareLogIndicesByLevel.value).map(([level, indices]) => [level, (indices as unknown[]).length]),
+        ),
+    )
+
+    const cursorLogLevel = computed(() =>
+        Object.entries(viewTypeAwareLogIndicesByLevel.value).find(([_, indices]) =>
+            (indices as string[]).includes(logCursor.value!),
+        )?.[0],
+    )
+
+    const cursorIdxForLevel = computed(() =>
+        (viewTypeAwareLogIndicesByLevel.value as Record<string, string[]>)?.[cursorLogLevel.value!]
+            ?.toSorted(sortLogsByViewOrder)
+            ?.indexOf(logCursor.value!),
+    )
+
+    const temporalViewLogIndicesByLevel = computed(() => {
+        const result: Record<string, string[]> = temporalLogs.value.reduce((acc: Record<string, string[]>, item: Record<string, any>) => {
+            if (!acc[item.level]) {
+                acc[item.level] = []
             }
-        },
-        data() {
-            return {
-                fullscreen: false,
-                filter: undefined,
-                openedTaskrunsCount: 0,
-                raw_view: (localStorage.getItem(storageKeys.LOGS_VIEW_TYPE) ?? "false").toLowerCase() === "true",
-                logIndicesByLevel: Object.fromEntries(LogUtils.levelOrLower(undefined).map(level => [level, []])),
-                logCursor: undefined,
+            acc[item.level].push(item.index.toString())
+            return acc
+        }, {})
+        LogUtils.levelOrLower(undefined as any).forEach((level: string) => {
+            if (!result[level]) {
+                result[level] = []
             }
-        },
-        created() {
-            this.filter = (this.$route.query.q || undefined)
-        },
-        watch:{
-            routeLevel: {
-                handler() {
-                    if (this.raw_view) {
-                        this.loadLogs()
-                    }
-                },
-            },
-            logCursor(newValue) {
-                if (newValue !== undefined && this.raw_view) {
-                    this.scrollToLog(newValue)
-                }
-            },
-        },
-        computed: {
-            State() {
-                return State
-            },
-            temporalLogs() {
-                const logResults = this.executionsStore.logs ?? []
+        })
+        return result
+    })
 
-                if (!logResults.length) {
-                    return []
-                }
+    const viewTypeAwareLogIndicesByLevel = computed(() =>
+        raw_view.value ? temporalViewLogIndicesByLevel.value : logIndicesByLevel.value,
+    )
 
-                const filtered = logResults.filter(log => {
-                    if (!this.filter) return true
-                    return log.message?.toLowerCase().includes(this.filter.toLowerCase())
-                })
+    watch(routeLevel, () => {
+        if (raw_view.value) {
+            loadLogs()
+        }
+    })
 
-                return filtered.map((logLine, index) => ({
-                    ...logLine,
-                    index,
-                    uid: `${logLine.taskRunId ?? ""}-${logLine.attemptNumber ?? 0}-${logLine.timestamp}-${index}`,
-                }))
-            },
-            ...mapStores(useExecutionsStore),
-            executionId() {
-                return this.executionsStore.execution.id
-            },
-            downloadName() {
-                return `kestra-execution-${this.$moment().format("YYYYMMDDHHmmss")}-${this.executionId}.log`
-            },
-            logDisplayButtonText() {
-                return this.openedTaskrunsCount === 0 ? this.$t("expand all") : this.$t("collapse all")
-            },
-            logDisplayButtonIcon() {
-                return this.openedTaskrunsCount === 0 ? UnfoldMoreHorizontal : UnfoldLessHorizontal
-            },
-            logViewTypeButtonIcon() {
-                return this.raw_view ? ViewGrid : ViewList
-            },
-            currentLevelOrLower() {
-                return LogUtils.levelOrLower(this.routeLevel)
-            },
-            countByLogLevel() {
-                return Object.fromEntries(Object.entries(this.viewTypeAwareLogIndicesByLevel).map(([level, indices]) => [level, indices.length]))
-            },
-            cursorLogLevel() {
-                return Object.entries(this.viewTypeAwareLogIndicesByLevel).find(([_, indices]) => indices.includes(this.logCursor))?.[0]
-            },
-            cursorIdxForLevel() {
-                return this.viewTypeAwareLogIndicesByLevel?.[this.cursorLogLevel]?.toSorted(this.sortLogsByViewOrder)?.indexOf(this.logCursor)
-            },
-            temporalViewLogIndicesByLevel() {
-                const temporalViewLogIndicesByLevel = this.temporalLogs.reduce((acc, item) => {
-                    if (!acc[item.level]) {
-                        acc[item.level] = []
-                    }
-                    acc[item.level].push(item.index.toString())
-                    return acc
-                }, {})
-                LogUtils.levelOrLower(undefined).forEach(level => {
-                    if (!temporalViewLogIndicesByLevel[level]) {
-                        temporalViewLogIndicesByLevel[level] = []
-                    }
-                })
+    watch(logCursor, (newValue) => {
+        if (newValue !== undefined && raw_view.value) {
+            scrollToLog(newValue)
+        }
+    })
 
-                return temporalViewLogIndicesByLevel
+    function loadLogs() {
+        executionsStore.loadLogs({
+            executionId: executionId.value!,
+            params: {
+                minLevel: effectiveLevel.value,
             },
-            viewTypeAwareLogIndicesByLevel() {
-                return this.raw_view ? this.temporalViewLogIndicesByLevel : this.logIndicesByLevel
-            },
-        },
-        methods: {
-            loadLogs(){
-                this.executionsStore.loadLogs({
-                    executionId: this.executionId,
-                    params: {
-                        minLevel: this.effectiveLevel,
-                    },
-                })
-            },
-            downloadContent() {
-                this.executionsStore.downloadLogs({
-                    executionId: this.executionId,
-                    params: {
-                        minLevel: this.effectiveLevel,
-                    },
-                }).then((response) => {
-                    Utils.downloadUrl(window.URL.createObjectURL(new Blob([response])), this.downloadName)
-                })
-            },
-            copyAllLogs() {
-                this.executionsStore.downloadLogs({
-                    executionId: this.executionId,
-                    params: {
-                        minLevel: this.effectiveLevel,
-                    },
-                }).then((response) => {
-                    Utils.copy(response)
-                })
-            },
-            forwardEvent(type, event) {
-                this.$emit(type, event)
-            },
-            prevent(event) {
-                event.preventDefault()
-            },
-            expandCollapseAll() {
-                if (this.$refs.logs && this.$refs.logs.toggleExpandCollapseAll) {
-                    this.$refs.logs.toggleExpandCollapseAll()
-                }
-            },
-            toggleViewType() {
-                this.logCursor = undefined
-                this.raw_view = !this.raw_view
-                localStorage.setItem(storageKeys.LOGS_VIEW_TYPE, String(this.raw_view))
-            },
-            sortLogsByViewOrder(a, b) {
-                const aSplit = a.split("/")
-                const taskRunIndexA = aSplit?.[0]
-                const bSplit = b.split("/")
-                const taskRunIndexB = bSplit?.[0]
-                if (taskRunIndexA === undefined) {
-                    return taskRunIndexB === undefined ? 0 : -1
-                }
-                if (taskRunIndexB === undefined) {
-                    return 1
-                }
-                if (taskRunIndexA === taskRunIndexB) {
-                    return this.sortLogsByViewOrder(aSplit.slice(1).join("/"), bSplit.slice(1).join("/"))
-                }
+        })
+    }
 
-                return Number.parseInt(taskRunIndexA) - Number.parseInt(taskRunIndexB)
+    function downloadContent() {
+        executionsStore.downloadLogs({
+            executionId: executionId.value!,
+            params: {
+                minLevel: effectiveLevel.value,
             },
-            previousLogForLevel(level) {
-                const logIndicesForLevel = this.viewTypeAwareLogIndicesByLevel[level]
-                if (this.logCursor === undefined) {
-                    this.logCursor = logIndicesForLevel?.[logIndicesForLevel.length - 1]
-                    return
-                }
+        }).then((response: string) => {
+            Utils.downloadUrl(window.URL.createObjectURL(new Blob([response])), downloadName.value)
+        })
+    }
 
-                const sortedIndices = [...logIndicesForLevel, this.logCursor].filter(distinctFilter).sort(this.sortLogsByViewOrder)
-                this.logCursor = sortedIndices?.[sortedIndices.indexOf(this.logCursor) - 1] ?? sortedIndices[sortedIndices.length - 1]
+    function copyAllLogs() {
+        executionsStore.downloadLogs({
+            executionId: executionId.value!,
+            params: {
+                minLevel: effectiveLevel.value,
             },
-            nextLogForLevel(level) {
-                const logIndicesForLevel = this.viewTypeAwareLogIndicesByLevel[level]
-                if (this.logCursor === undefined) {
-                    this.logCursor = logIndicesForLevel?.[0]
-                    return
-                }
+        }).then((response: string) => {
+            Utils.copy(response)
+        })
+    }
 
-                const sortedIndices = [...logIndicesForLevel, this.logCursor].filter(distinctFilter).sort(this.sortLogsByViewOrder)
-                this.logCursor = sortedIndices?.[sortedIndices.indexOf(this.logCursor) + 1] ?? sortedIndices[0]
-            },
-            scrollToLog(index) {
-                this.$refs.logScroller.scrollToItem(index)
-            },
-        },
+    function expandCollapseAll() {
+        if (logs.value && (logs.value as any).toggleExpandCollapseAll) {
+            (logs.value as any).toggleExpandCollapseAll()
+        }
+    }
+
+    function toggleViewType() {
+        logCursor.value = undefined
+        raw_view.value = !raw_view.value
+        localStorage.setItem(storageKeys.LOGS_VIEW_TYPE, String(raw_view.value))
+    }
+
+    function sortLogsByViewOrder(a: string, b: string): number {
+        const aSplit = a.split("/")
+        const taskRunIndexA = aSplit?.[0]
+        const bSplit = b.split("/")
+        const taskRunIndexB = bSplit?.[0]
+        if (taskRunIndexA === undefined) {
+            return taskRunIndexB === undefined ? 0 : -1
+        }
+        if (taskRunIndexB === undefined) {
+            return 1
+        }
+        if (taskRunIndexA === taskRunIndexB) {
+            return sortLogsByViewOrder(aSplit.slice(1).join("/"), bSplit.slice(1).join("/"))
+        }
+
+        return Number.parseInt(taskRunIndexA) - Number.parseInt(taskRunIndexB)
+    }
+
+    function previousLogForLevel(level: string) {
+        const logIndicesForLevel = (viewTypeAwareLogIndicesByLevel.value as Record<string, string[]>)[level]
+        if (logCursor.value === undefined) {
+            logCursor.value = logIndicesForLevel?.[logIndicesForLevel.length - 1]
+            return
+        }
+
+        const sortedIndices = [...logIndicesForLevel, logCursor.value].filter(distinctFilter as (v: string, i: number, a: string[]) => boolean).sort(sortLogsByViewOrder)
+        logCursor.value = sortedIndices?.[sortedIndices.indexOf(logCursor.value) - 1] ?? sortedIndices[sortedIndices.length - 1]
+    }
+
+    function nextLogForLevel(level: string) {
+        const logIndicesForLevel = (viewTypeAwareLogIndicesByLevel.value as Record<string, string[]>)[level]
+        if (logCursor.value === undefined) {
+            logCursor.value = logIndicesForLevel?.[0]
+            return
+        }
+
+        const sortedIndices = [...logIndicesForLevel, logCursor.value].filter(distinctFilter as (v: string, i: number, a: string[]) => boolean).sort(sortLogsByViewOrder)
+        logCursor.value = sortedIndices?.[sortedIndices.indexOf(logCursor.value) + 1] ?? sortedIndices[0]
+    }
+
+    function scrollToLog(index: string) {
+        logScroller.value?.scrollToItem(Number(index))
     }
 </script>
 
 <style scoped lang="scss">
-        .attempt-wrapper {
+    .attempt-wrapper {
         background-color: var(--ks-background-card);
 
         :deep(.vue-recycle-scroller__item-view + .vue-recycle-scroller__item-view) {
@@ -411,4 +400,3 @@
         margin-bottom: 0.5rem !important;
     }
 </style>
-
